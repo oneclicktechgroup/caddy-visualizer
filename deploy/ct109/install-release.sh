@@ -37,7 +37,7 @@ incoming="$(mktemp -d "${APP_DIR}/releases/.incoming.XXXXXX")"
 trap 'rm -rf "$incoming"' EXIT
 tar -xzf "$tarball" -C "$incoming"
 
-src="$(find "$incoming" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+src="$(find "$incoming" -mindepth 1 -maxdepth 1 -type d -print -quit)"
 [ -n "$src" ] && [ -f "$src/VERSION" ] && [ -f "$src/app/server.js" ] \
   || fail "not a valid release tarball"
 version="$(head -n 1 "$src/VERSION")"

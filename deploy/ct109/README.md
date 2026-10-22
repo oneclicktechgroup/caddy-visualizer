@@ -83,7 +83,9 @@ systemctl daemon-reload && systemctl enable caddy-visualizer
 
 ## 3. Build and install a release
 
-On your machine, from the repo (needs Docker and internet, because the build downloads fonts):
+On your machine, from the repo (Docker Desktop must be running, and the build needs internet because
+it downloads fonts; no admin rights or Windows Developer Mode needed, since the tarball is packed
+inside the container):
 
 ```bash
 ./deploy/ct109/build-bundle.sh            # writes dist/caddy-visualizer-<ver>-linux-x64.tar.gz

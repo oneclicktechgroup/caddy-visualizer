@@ -50,3 +50,6 @@ next-env.d.ts
 *.db-shm
 *.db-wal
 /secrets/
+
+# Release tarballs from deploy/ct109/build-bundle.sh
+/dist/

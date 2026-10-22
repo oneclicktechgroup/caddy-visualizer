@@ -1,0 +1,41 @@
+# What to add to /etc/caddy/Caddyfile. Merge by hand; nothing here replaces your sites.
+
+# ---- 1. Global options: must be the FIRST block in the file --------------------------
+# If you already have a global block ({ email ..., etc }), add only the `admin` line to it.
+# The manager refuses to save any Caddyfile edit that changes this line.
+{
+	admin unix//run/caddy-admin/admin.sock|0222
+}
+
+# ---- 2. Access-log snippet (feeds the Metrics and Logs pages) ------------------------
+# Rotation is kept small because the container has little disk.
+(access_log) {
+	log {
+		output file /var/log/caddy/access.log {
+			mode 644
+			roll_size 10MiB
+			roll_keep 3
+		}
+		format json
+	}
+}
+
+# ---- 3. Your existing sites ----------------------------------------------------------
+# Add `import access_log` as the first line inside each site you want in the metrics.
+# Sites created in the UI get it automatically once the snippet above exists.
+#
+# example.internal {
+# 	import access_log
+# 	reverse_proxy 10.0.0.10:8080
+# }
+
+# The UI itself, as a normal (manual) site, so the manager can neither remove nor override it.
+# Use the same TLS approach as your other internal sites (add `tls internal` if the name
+# is not publicly resolvable and you do not use a DNS challenge).
+caddy-ui.example.internal {
+	import access_log
+	reverse_proxy 127.0.0.1:3000
+}
+
+# ---- 4. Sites managed by the UI: keep this line exactly once ------------------------
+import /var/lib/caddy-visualizer/managed/sites.caddy

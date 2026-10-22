@@ -1,0 +1,44 @@
+# /etc/systemd/system/caddy-visualizer.service
+[Unit]
+Description=Caddy Visualizer (web UI for Caddy)
+After=network.target caddy.service
+Wants=caddy.service
+
+[Service]
+Type=simple
+User=caddymgr
+Group=caddymgr
+# Migrations are read from ./drizzle, so the working directory must be the app directory.
+WorkingDirectory=/opt/caddy-visualizer/current/app
+EnvironmentFile=/etc/caddy-visualizer/env
+ExecStart=/opt/caddy-visualizer/current/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+# Sized for a 512 MB container that also runs Caddy.
+Environment=NODE_OPTIONS=--max-old-space-size=192
+MemoryHigh=280M
+MemoryMax=340M
+
+# Must stay 0022: the manager creates .staging/ (mode 0755) and Caddy, which runs as
+# another user, has to read it. A stricter umask makes every apply fail at /adapt.
+UMask=0022
+
+# Hardening. If the unit fails with status=226/NAMESPACE (some unprivileged LXC
+# setups), remove the lines from here down to the end of the [Service] section.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/caddy-visualizer /etc/caddy/Caddyfile
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

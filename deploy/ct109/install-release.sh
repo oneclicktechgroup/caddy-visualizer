@@ -56,7 +56,8 @@ if ! ( cd "$dest/app" && "$dest/bin/node" -e "new (require('better-sqlite3'))(':
   fail "node or the SQLite module cannot run here (glibc older than 2.34?). Nothing was changed."
 fi
 
-previous="$(readlink -f "${APP_DIR}/current" 2>/dev/null || true)"
+# -e: empty when there is no current release yet (-f would print the dangling path).
+previous="$(readlink -e "${APP_DIR}/current" 2>/dev/null || true)"
 
 systemctl stop "$SERVICE" 2>/dev/null || true
 

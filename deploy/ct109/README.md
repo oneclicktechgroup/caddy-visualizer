@@ -115,18 +115,19 @@ Merge `Caddyfile.snippet` into `/etc/caddy/Caddyfile`:
 Make this first edit by hand on the shell. The UI refuses any edit that changes the `admin`
 line (that rule is what keeps the connection from being cut later), so it cannot make this one.
 
-Validate, then reload through the **old** admin address. The new config moves the admin endpoint
-to the socket, and Caddy keeps serving throughout (tested with live requests: none failed):
+Check the syntax, then reload through the **old** admin address. The new config moves the admin
+endpoint to the socket, and Caddy keeps serving throughout (tested with live requests: none failed):
 
 ```bash
-# Placeholders such as {env.CF_API_TOKEN} only need some value for a syntax check. Use your own names.
-runuser -u caddy -- env HOME=/var/lib/caddy CF_API_TOKEN=dummy \
-  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+# Syntax only. Do not use `caddy validate` with a fake token: a DNS provider module such as
+# Cloudflare checks the token's format and rejects a made-up one. The reload below is the real
+# check, because it provisions the config with the service's real environment.
+caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile > /dev/null && echo syntax-ok
 
 # Port 2019 is whatever your Caddy listens on today (the default).
 caddy reload --address localhost:2019 --config /etc/caddy/Caddyfile --adapter caddyfile --force
 
-ls -l /run/caddy-admin/admin.sock        # expect srw--w--w-
+ls -l /run/caddy-admin/admin.sock        # expect s-w--w--w- (mode 0222: write-only, by design)
 systemctl reload caddy && echo reload-ok # the normal reload now finds the socket by itself
 ```
 
@@ -168,7 +169,8 @@ systemctl start caddy-visualizer
 - **The UI is down or broken:** Caddy keeps running and serving; it does not depend on the UI.
   `journalctl -u caddy-visualizer -n 50`.
 - **Edit the Caddyfile without the UI:** `systemctl stop caddy-visualizer`, edit as root,
-  `caddy validate`, `systemctl reload caddy`.
+  `caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null` (syntax check),
+  `systemctl reload caddy` (a rejected config leaves the running one in place).
 - **Caddy will not start after a UI change:** the UI only writes files after Caddy accepted the
   config, but if it happens, previous versions are `/var/lib/caddy-visualizer/managed/sites.caddy.prev`
   and `.../managed/Caddyfile.prev`, plus your `/root/Caddyfile.before-visualizer`.

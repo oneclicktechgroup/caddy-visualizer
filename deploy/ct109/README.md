@@ -110,14 +110,27 @@ Merge `Caddyfile.snippet` into `/etc/caddy/Caddyfile`:
 - a site for the UI itself, as a manual site (change the hostname);
 - one `import /var/lib/caddy-visualizer/managed/sites.caddy` line.
 
-Then validate and restart (a restart, not a reload, because the admin address changes):
+Make this first edit by hand on the shell. The UI refuses any edit that changes the `admin`
+line (that rule is what keeps the connection from being cut later), so it cannot make this one.
+
+Validate, then reload through the **old** admin address. The new config moves the admin endpoint
+to the socket, and Caddy keeps serving throughout (tested with live requests: none failed):
 
 ```bash
-runuser -u caddy -- caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-systemctl restart caddy
+# Placeholders such as {env.CF_API_TOKEN} only need some value for a syntax check. Use your own names.
+runuser -u caddy -- env HOME=/var/lib/caddy CF_API_TOKEN=dummy \
+  caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+# Port 2019 is whatever your Caddy listens on today (the default).
+caddy reload --address localhost:2019 --config /etc/caddy/Caddyfile --adapter caddyfile --force
+
 ls -l /run/caddy-admin/admin.sock        # expect srw--w--w-
-systemctl reload caddy && echo reload-ok # reload must still work over the socket
+systemctl reload caddy && echo reload-ok # the normal reload now finds the socket by itself
 ```
+
+If the reload reports an error, Caddy keeps the old config (a failed load changes nothing).
+Fallback: `systemctl restart caddy` (a few seconds of downtime for everything it proxies).
+To undo this step: `cp /root/Caddyfile.before-visualizer /etc/caddy/Caddyfile && systemctl restart caddy`.
 
 ## 5. First login
 
@@ -166,6 +179,31 @@ systemctl start caddy-visualizer
   gap counter. Raise `roll_size` in the snippet if it keeps happening.
 - **Disk:** the log keeps at most about 40 MB, and request rows are kept 14 days. Watch the
   size of `/var/lib/caddy-visualizer/data` if you have a busy site.
+
+## If your Caddyfile is one wildcard site with `@name host ...` / `handle` blocks
+
+Common in homelabs (`*.example.com { @app host app.example.com  handle @app { reverse_proxy ... } }`,
+one wildcard certificate for everything). It works with this tool, with one limit you should know:
+
+- **Works:** the Metrics and Logs pages (they use the request host, so every service gets its own
+  numbers), the raw Caddyfile editor with validation through Caddy, revision history and rollback,
+  and the dashboard.
+- **Does not work:** the "add site" form for any name the wildcard covers. The apply step refuses it
+  on purpose, because a separate site block for `app.example.com` next to `*.example.com` would take
+  over that name. Add services by editing the Caddyfile in the UI (a new `@name host` + `handle` pair).
+- **Dashboard:** the wildcard site is shown as one row with all its upstreams merged, not one row
+  per host.
+
+Do not "fix" this by splitting the wildcard into one site block per host: each name then gets its
+own certificate, and every internal host name ends up in the public Certificate Transparency logs.
+The import line for the managed sites file is still required exactly once; with a wildcard setup
+that file simply stays empty.
+
+Putting the UI itself behind the wildcard: add a `handle` for its host that proxies to
+`127.0.0.1:3000`, and guard it with `@lan remote_ip private_ranges` plus a `respond 403` fallback.
+The tool can reconfigure your proxy, so it must not be reachable from the internet. If something
+sits in front of Caddy (a tunnel or CDN), the connecting address is that proxy, so the guard
+proves nothing: use an allow-list for that proxy's real client header instead.
 
 ## Notes
 

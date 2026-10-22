@@ -14,6 +14,8 @@ EnvironmentFile=/etc/caddy-visualizer/env
 ExecStart=/opt/caddy-visualizer/current/bin/node server.js
 Restart=on-failure
 RestartSec=5
+# node exits 143 on SIGTERM; treat that as a clean stop so "systemctl stop" is not logged as a failure.
+SuccessExitStatus=143
 
 # Sized for a 512 MB container that also runs Caddy.
 Environment=NODE_OPTIONS=--max-old-space-size=192

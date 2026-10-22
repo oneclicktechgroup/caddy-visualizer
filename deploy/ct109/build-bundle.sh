@@ -54,8 +54,11 @@ TARBALL="${OUT}/caddy-visualizer-${VERSION}-linux-x64.tar.gz"
 
 echo "==> verifying the copy on this machine"
 ( cd "$OUT" && sha256sum -c "$(basename "$TARBALL").sha256" )
-tar -tzf "$TARBALL" | grep -q "/app/server.js$" || fail "server.js not in the tarball"
-tar -tzf "$TARBALL" | grep -q "/bin/node$" || fail "bin/node not in the tarball"
+# Read the listing first: `tar -t | grep -q` makes grep exit at the first match, tar then dies
+# of SIGPIPE, and `pipefail` reports the whole pipeline as failed although the file is there.
+LISTING="$(tar -tzf "$TARBALL")"
+grep -q "/app/server.js$" <<<"$LISTING" || fail "server.js not in the tarball"
+grep -q "/bin/node$" <<<"$LISTING" || fail "bin/node not in the tarball"
 
 echo
 echo "Built ${TARBALL} ($(du -h "$TARBALL" | cut -f1))"

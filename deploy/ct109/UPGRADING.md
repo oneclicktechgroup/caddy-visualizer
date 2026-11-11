@@ -118,10 +118,12 @@ git status                                  # clean tree: a modified tracked fil
 ./deploy/ct109/build-bundle.sh              # dist/caddy-visualizer-<ver>-linux-x64.tar.gz + .sha256
 ```
 
-`<ver>` is the short commit hash: upstream's tags are lightweight, and `git describe` ignores those without
-`--tags`. To get a readable version, pass one: `./deploy/ct109/build-bundle.sh <new>-ct109.1`. The installer
-refuses a version that is already installed, so never reuse one. The build prints the bundled Node version; it
-comes from `node:24-bookworm-slim` at build time, so a rebuild can pick up a newer 24.x patch.
+`<ver>` is `git describe --tags`: the nearest upstream tag, the commits since it, and the commit, for example
+`v1.6.0-12-g1a2b3c4d`, plus `-dirty` if a tracked file is modified. (Upstream's tags are lightweight, which is
+why `--tags` is needed; builds before this was added are bare commit hashes, such as `bff30f9e`.) To choose
+the version yourself, pass it: `./deploy/ct109/build-bundle.sh <new>-ct109.1`. The installer refuses a version
+that is already installed, so never reuse one. The build prints the bundled Node version; it comes from
+`node:24-bookworm-slim` at build time, so a rebuild can pick up a newer 24.x patch.
 The script verifies the checksum and that the tarball contains `app/server.js` and `bin/node`. A documentation
 commit made after the build does not change the app, but say so in the PR (the tarball names the build commit).
 
@@ -230,8 +232,8 @@ its `.sha256` in `dist/`.
 
 - **Check, don't trust, a hand-off's statements about repository state.** It said the kit branch was unpushed;
   `git rev-parse origin/<branch>` showed it was already on the remote.
-- **`git describe` without `--tags` ignores lightweight tags**, so versions are bare hashes. Cosmetic, but it
-  makes `cat VERSION` on CT109 unreadable at a glance.
+- **`git describe` without `--tags` ignores lightweight tags**, so the first builds were named by bare hash
+  (`bff30f9e`), which makes `cat VERSION` on CT109 unreadable at a glance. `build-bundle.sh` now passes `--tags`.
 - **The fork is public.** Pushes and PR text are public; keep hostnames, addresses and secrets out.
 - **`gh` can resolve a fork's default repo to its parent.** Always `--repo oneclicktechgroup/caddy-visualizer`.
 - **A `cd` in one shell call leaks into the next.** Use absolute paths.

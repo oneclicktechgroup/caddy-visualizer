@@ -22,11 +22,11 @@ Default is **`manual`**: no commits unless explicitly requested. The user can sw
 by saying `commit mode: auto` or `commit mode: auto-pr`. The mode resets to `manual` at the start of
 every new session.
 
-| Mode               | Behavior                                                                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `manual` (default) | Never commit unsolicited. Suggest a commit message at natural stopping points; the user commits or asks you to.                                                           |
-| `auto`             | Commit locally after each completed task once its checks pass. Never push.                                                                                                |
-| `auto-pr`          | Commit after each completed task, push to a feature branch, open a PR when the task group completes. Never push to `main`; merge a PR only if the user said to merge it. |
+- **`manual` (default)**: never commit unsolicited. Suggest a commit message at natural stopping points; the
+  user commits or asks you to.
+- **`auto`**: commit locally after each completed task once its checks pass. Never push.
+- **`auto-pr`**: commit after each completed task, push to a feature branch, open a PR when the task group
+  completes. Never push to `main`; merge a PR only if the user said to merge it.
 
 Branch names: `deploy/<slug>` for kit and upgrade work, `chore/<slug>-<yyyymmdd>` for everything else.
 Commit messages for kit work start with `ct109 kit:`. Write a message that contains awkward characters
@@ -104,7 +104,8 @@ with `git commit -F <file>`.
 - `main` = an upstream release plus our kit. It moves forward only through a reviewed PR (or a deliberate
   fast-forward the user asked for). Never force-push it.
 - Pass `--repo oneclicktechgroup/caddy-visualizer` to `gh`, so a PR can never target upstream.
-- Upstream tags are lightweight; `git describe` needs `--tags` to see them.
+- Upstream tags are lightweight; `git describe` needs `--tags` to see them (`build-bundle.sh` passes it, so
+  versions read like `v1.6.0-12-g1a2b3c4d`).
 
 ## Stack and commands
 

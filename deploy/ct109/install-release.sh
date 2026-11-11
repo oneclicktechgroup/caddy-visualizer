@@ -67,6 +67,25 @@ if [ -n "$DB_PATH" ] && [ -f "$DB_PATH" ]; then
   install -d -m 700 -o root -g root "$backup_dir"
   backup="${backup_dir}/$(basename "$DB_PATH").pre-${version}-$(date +%Y%m%d-%H%M%S)"
   cp -a "$DB_PATH" "$backup"
+  # The service exits on SIGTERM without closing SQLite, so its newest writes can still sit in the -wal
+  # file, and a copy of the main file alone misses them (a young database then looks empty). Copy the
+  # -wal file next to the backup and fold it in there; the live files are not touched. The result is one
+  # self-contained, integrity-checked file, which is what a restore expects (cp over the live file, then
+  # remove its -wal and -shm).
+  if [ -f "${DB_PATH}-wal" ]; then
+    cp -a "${DB_PATH}-wal" "${backup}-wal"
+    fold_js="const db = new (require('better-sqlite3'))(process.argv[1]);
+      db.pragma('wal_checkpoint(TRUNCATE)');
+      if (db.pragma('integrity_check', { simple: true }) !== 'ok') process.exit(1);
+      db.close();"
+    if ! ( cd "$dest/app" && "$dest/bin/node" -e "$fold_js" "$backup" ); then
+      rm -f "$backup" "${backup}-wal" "${backup}-shm"
+      systemctl start "$SERVICE" 2>/dev/null || true   # `current` still points at the previous release
+      rm -rf "$dest"
+      fail "could not fold the database's -wal file into the backup. The previous release was restarted; nothing else was changed."
+    fi
+    rm -f "${backup}-wal" "${backup}-shm"
+  fi
   # Files beyond the newest KEEP_DB_BACKUP_FILES are removed.
   # shellcheck disable=SC2012
   ls -1t "$backup_dir" | tail -n +"$((KEEP_DB_BACKUP_FILES + 1))" | while read -r old; do

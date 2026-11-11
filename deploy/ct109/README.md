@@ -22,11 +22,18 @@ as on CT109) next to a real Caddy 2.11.4 whose admin socket has mode `0222`:
   loopback or a private address are blocked without a connection.
 - Memory, with the unit's 192 MB heap cap and every page rendered three times in a row: peak 229 to
   230 MB over two runs, about the same as the 1.0.2 build (219 to 239 MB), under `MemoryMax`.
+- `install-release.sh` itself, run in the container with a stand-in for `systemctl`: the database backup
+  holds everything the live database held, and a failed backup leaves the previous release running. The
+  service exits on SIGTERM with its newest writes still in the `-wal` file, which the installer's first
+  version did not back up (a young database came out empty); it now folds the `-wal` file into the backup.
 
-Not tested here: the systemd unit and `install-release.sh` (they need root on the target; both are
-unchanged since the 1.0.2 install that runs today), changing the Caddyfile or a form site through the UI
-against live Caddy, and basic auth, redirects or `header_up` on a real site. Treat the first install of
-each release as a trial run, with the snapshot below in place.
+Not tested here: the systemd unit and the real `systemctl` calls (they need root and systemd on the target),
+changing the Caddyfile or a form site through the UI against live Caddy, and basic auth, redirects or
+`header_up` on a real site. Treat the first install of each release as a trial run, with the snapshot
+below in place.
+
+`install-release.sh` and the unit are not in the tarball: when either changes in this repo, copy it to CT109
+by hand (the table above says where it goes) and, for the unit, `systemctl daemon-reload`.
 
 ## Requirements on CT109
 

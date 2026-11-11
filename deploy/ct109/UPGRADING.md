@@ -137,7 +137,7 @@ local-only files); the wrapper mounts the tarballs only.
 ./deploy/ct109/smoke/run.sh dist/caddy-visualizer-<ver>-linux-x64.tar.gz dist/caddy-visualizer-<installed>-linux-x64.tar.gz
 ```
 
-About 5 minutes; the log is `dist/smoke-<ver>.log`. Set `CADDY_VERSION` if CT109's Caddy is not 2.11.4. What it
+Allow 5 to 10 minutes; the log is `dist/smoke-<ver>.log`. Set `CADDY_VERSION` if CT109's Caddy is not 2.11.4. What it
 covers:
 
 1. `smoke.sh`: fresh start; 20 black-box checks (health, redirects, CSRF, security headers, static assets);
@@ -149,10 +149,14 @@ covers:
    Settings shows Caddy connected, access-log ingestion, and the certificate checks (a wildcard-only
    config must probe nothing; named sites resolving to loopback or a private address must be blocked).
 3. `smoke3.sh`: memory, old against new, same workload, under the unit's 192 MB heap cap.
+4. `smoke4.sh`: the real `install-release.sh` against a running old release, with a stand-in for `systemctl`.
+   The database backup must hold everything the live database held (the service leaves its newest writes in
+   the `-wal` file), and when the backup step fails the old release must still be running with nothing left
+   behind. It needs the old tarball, like `smoke3.sh`.
 
 Read the log, do not trust the last line alone. When upstream adds pages, update the `PAGES` list in
-`authed.mjs`; when it adds log lines worth asserting, update `smoke2.sh`. Not covered: systemd,
-`install-release.sh`, applying a change through the UI against live Caddy, and basic auth, redirects or
+`authed.mjs`; when it adds log lines worth asserting, update `smoke2.sh`. Not covered: systemd and the
+real `systemctl` calls, applying a change through the UI against live Caddy, and basic auth, redirects or
 `header_up` on a real site.
 
 ## 7. Publish
@@ -245,5 +249,10 @@ its `.sha256` in `dist/`.
   process is running, and ask first.
 - **Certificate checks never probe wildcard names.** With a wildcard-only Caddyfile the feature is inert;
   named sites that resolve to private addresses are blocked unless listed in `CERT_CHECK_PRIVATE_DOMAINS`.
+- **A stopped service can leave its newest writes in the `-wal` file.** The app exits on SIGTERM without
+  closing SQLite, so the installer's first backup (the main file alone) could miss them; in a young database
+  it was empty. Found after the v1.6.0 deploy, when the backup's timestamp was minutes older than the stop.
+  `install-release.sh` now folds the `-wal` file into the backup, and `smoke4.sh` checks it. The Proxmox
+  snapshot copies the whole file system, `-wal` file included, so it is the complete rollback point.
 - **Do not set `AUTH_DISABLED` in a native install.** Its guard depends on `BIND_ADDRESS`, which only the
   Docker compose file passes in.

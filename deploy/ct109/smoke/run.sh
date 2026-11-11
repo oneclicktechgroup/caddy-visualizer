@@ -51,7 +51,8 @@ echo "==> building the test image ($IMAGE: Debian 13 + Caddy ${CADDY_VERSION})"
 printf 'FROM caddy:%s AS c\nFROM debian:trixie-slim\nCOPY --from=c /usr/bin/caddy /usr/local/bin/caddy\n' "$CADDY_VERSION" \
   | docker build -q -t "$IMAGE" - >/dev/null
 
-mounts=( -v "$(native "$NEW"):/in/${NEW_NAME}:ro" -v "${SCRIPTS}:/scripts:ro" )
+mounts=( -v "$(native "$NEW"):/in/${NEW_NAME}:ro" -v "${SCRIPTS}:/scripts:ro" \
+  -v "$(native deploy/ct109/install-release.sh):/install/install-release.sh:ro" )
 [ -z "$OLD" ] || mounts+=( -v "$(native "$OLD"):/in/${OLD_NAME}:ro" )
 
 rc=0
@@ -65,7 +66,8 @@ run() { # <title> <script> <args...>
 
 run "1/3 fresh start${OLD:+, upgrade, downgrade, restore}" smoke.sh "$NEW_NAME" ${OLD:+"$OLD_NAME"}
 run "2/3 real Caddy: login, pages, access log, certificate checks" smoke2.sh "$NEW_NAME"
-[ -z "$OLD" ] || run "3/3 memory, old vs new" smoke3.sh "$NEW_NAME" "$OLD_NAME"
+[ -z "$OLD" ] || run "3/4 memory, old vs new" smoke3.sh "$NEW_NAME" "$OLD_NAME"
+[ -z "$OLD" ] || run "4/4 install-release.sh: complete backup, failed backup" smoke4.sh "$NEW_NAME" "$OLD_NAME"
 
 echo
 if grep -qE 'FAIL|SMOKE TEST: [1-9]|SMOKE2: [1-9]|CHECK\(S\) FAILED|Traceback|Error: ' "$LOG"; then

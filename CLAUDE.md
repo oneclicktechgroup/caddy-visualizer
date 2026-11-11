@@ -92,8 +92,10 @@ with `git commit -F <file>`.
    upgrades mergeable.
 5. **Full data privacy.** The only expected outbound traffic is Caddy's admin API over a unix socket (and
    Google Fonts at build time). Re-check egress, telemetry and update checks in every upgrade review.
-6. **SQLite consistency.** Never copy a live WAL database. Stop the service, then back up (the installer does
-   exactly that). A rollback that crosses a migration restores the backup as well as the release link.
+6. **SQLite consistency.** Never copy a live WAL database. Stop the service, then back up the database file
+   together with its `-wal` file: the service exits on SIGTERM without closing SQLite, so the main file alone
+   can miss recent writes. The installer folds the `-wal` file into the backup. A rollback that crosses a
+   migration restores the backup as well as the release link.
 7. **Releases are immutable.** Never edit a tag or rebuild a version string that is already installed;
    `install-release.sh` refuses a version it already has.
 

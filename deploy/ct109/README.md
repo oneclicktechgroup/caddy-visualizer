@@ -20,6 +20,29 @@ Treat the first install as a trial run, with the snapshot below in place.
   (user `caddy`, Caddyfile at `/etc/caddy/Caddyfile`).
 - About 200 MB of RAM headroom and 1 GB of disk (each release is roughly 190 MB, three are kept).
 
+## Upgrading from 1.0.x to 1.6
+
+Reviewed against upstream `v1.0.2..v1.6.0`; nothing there blocks this install. What changes for it:
+
+- **Database migrations 0007 to 0011 run on the first start.** They rebuild the `caddy_sites` table
+  (existing rows are kept) and add a `certificate_checks` table. A manual rollback must therefore
+  restore the pre-update database backup, not only the `current` link.
+  `install-release.sh` does both by itself when the new release fails its health check.
+- **No new required settings.** The env file from 1.0.x works unchanged. Keep `AUTH_DISABLED`
+  unset (see the note in the env example). `CERT_CHECK_PRIVATE_DOMAINS` is optional.
+- **New outbound traffic: certificate checks.** Every 6 hours (first run 1 minute after start) and
+  on "Check now", the app resolves the host names of Caddy's running config and opens a TLS
+  connection to port 443, reading the certificate only. Targets come from Caddy's config alone,
+  loopback and link-local addresses are never contacted, and private addresses only for domains in
+  `CERT_CHECK_PRIVATE_DOMAINS`. Wildcard names are not probed, so a wildcard-only Caddyfile
+  causes no connections at all. There is no switch to turn the checks off.
+- **Form sites gain basic auth, redirects, `header_up` rows and "skip upstream certificate check".**
+  They apply to sites the UI creates, so none of them help names that a wildcard site covers.
+  Basic auth needs Caddy 2.8+ (already required). Header values are stored in the database in
+  plain text, so do not put secrets in them.
+- **Caddy Config** now lists the site blocks of the main Caddyfile and can add
+  `import access_log` to them (checked by Caddy, recorded as a revision like any edit).
+
 ## 0. Preflight (run on CT109, check the output before going on)
 
 ```bash
@@ -160,7 +183,10 @@ Manual rollback to an older release:
 ```bash
 systemctl stop caddy-visualizer
 ln -sfn /opt/caddy-visualizer/releases/<old> /opt/caddy-visualizer/current
-# if the newer release migrated the database, also restore the matching backup file
+# If the newer release migrated the database (1.0.x -> 1.6 does), also restore the matching backup
+# file over the live one and remove its -wal/-shm files before starting:
+#   cp -a /var/lib/caddy-visualizer/data/backups/<file> /var/lib/caddy-visualizer/data/caddy-visualizer.db
+#   rm -f /var/lib/caddy-visualizer/data/caddy-visualizer.db-wal /var/lib/caddy-visualizer/data/caddy-visualizer.db-shm
 systemctl start caddy-visualizer
 ```
 

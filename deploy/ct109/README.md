@@ -20,8 +20,8 @@ as on CT109) next to a real Caddy 2.11.4 whose admin socket has mode `0222`:
   made by new features was not tested, which is why a manual rollback restores the backup.
 - Certificate checks: with a wildcard-only Caddyfile nothing is probed; named sites that resolve to
   loopback or a private address are blocked without a connection.
-- Memory, with the unit's 192 MB heap cap and every page rendered three times in a row: peak 229 MB
-  (1.0.2 build: 239 MB), under `MemoryMax`.
+- Memory, with the unit's 192 MB heap cap and every page rendered three times in a row: peak 229 to
+  230 MB over two runs, about the same as the 1.0.2 build (219 to 239 MB), under `MemoryMax`.
 
 Not tested here: the systemd unit and `install-release.sh` (they need root on the target; both are
 unchanged since the 1.0.2 install that runs today), changing the Caddyfile or a form site through the UI
@@ -191,7 +191,9 @@ systemctl restart caddy-visualizer
 
 ## Updating later
 
-Rebuild with `build-bundle.sh`, copy, run `install-release.sh`. That is the whole procedure.
+Rebuild with `build-bundle.sh`, copy, run `install-release.sh`. That is the whole procedure for a
+rebuild of what you already have. To move to a **new upstream release** (review, merge, smoke test,
+deploy), follow `UPGRADING.md`.
 Releases stay in `/opt/caddy-visualizer/releases`, three are kept, and the database backup
 from each update is in `/var/lib/caddy-visualizer/data/backups` (root only).
 

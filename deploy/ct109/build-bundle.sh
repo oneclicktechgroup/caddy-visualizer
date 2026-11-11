@@ -18,7 +18,10 @@ export MSYS_NO_PATHCONV=1
 
 cd "$(git rev-parse --show-toplevel)"
 
-VERSION="${1:-$(git describe --always --dirty --abbrev=8)}"
+# --tags: upstream's release tags are lightweight, which plain `git describe` skips. The default
+# version reads like v1.6.0-12-g1a2b3c4d (nearest tag, commits since, commit), plus -dirty if a
+# tracked file is modified.
+VERSION="${1:-$(git describe --tags --always --dirty --abbrev=8)}"
 VERSION="${VERSION//[^A-Za-z0-9._-]/_}"
 IMAGE="caddy-visualizer-build:${VERSION}"
 CONTAINER="caddy-visualizer-pack-${VERSION}-$$"

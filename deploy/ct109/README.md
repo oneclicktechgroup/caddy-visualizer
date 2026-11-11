@@ -6,12 +6,27 @@ cross hosts. Releases are built in Docker on your machine and installed as a tar
 
 ## What was and was not tested
 
-Tested (Linux amd64, Node 24.22, fonts stubbed because the test sandbox could not reach Google):
-production build, standalone layout used here, startup with migrations and admin creation,
-`/api/health`, login redirects, CSRF rejection on API posts, static assets, security headers.
+Tested on the 1.6.0 bundle (build `bff30f9e`, Node 24.22.3), run in a Debian 13 container (glibc 2.41,
+as on CT109) next to a real Caddy 2.11.4 whose admin socket has mode `0222`:
 
-Not tested: `build-bundle.sh` against Docker, the systemd unit, the Caddy integration on CT109.
-Treat the first install as a trial run, with the snapshot below in place.
+- `build-bundle.sh` end to end (Docker Desktop on Windows), checksum, and tarball contents.
+- Startup with migrations and admin creation, `/api/health`, login through the real form, every page
+  rendering (Dashboard, Metrics, Logs, Config, Caddyfile editor, new site, Certificates, Settings),
+  Settings showing Caddy as connected, access-log ingestion, CSRF rejection on API posts, security
+  headers, static assets.
+- Upgrade: a database made by the 1.0.2 build (with a legacy site row) opened by 1.6.0. Migrations went
+  from 7 to 12, the row survived, integrity and foreign-key checks were clean. Restoring the backup and
+  upgrading again worked. The 1.0.2 build also still starts on the migrated file; what it does with rows
+  made by new features was not tested, which is why a manual rollback restores the backup.
+- Certificate checks: with a wildcard-only Caddyfile nothing is probed; named sites that resolve to
+  loopback or a private address are blocked without a connection.
+- Memory, with the unit's 192 MB heap cap and every page rendered three times in a row: peak 229 MB
+  (1.0.2 build: 239 MB), under `MemoryMax`.
+
+Not tested here: the systemd unit and `install-release.sh` (they need root on the target; both are
+unchanged since the 1.0.2 install that runs today), changing the Caddyfile or a form site through the UI
+against live Caddy, and basic auth, redirects or `header_up` on a real site. Treat the first install of
+each release as a trial run, with the snapshot below in place.
 
 ## Requirements on CT109
 
@@ -25,8 +40,9 @@ Treat the first install as a trial run, with the snapshot below in place.
 Reviewed against upstream `v1.0.2..v1.6.0`; nothing there blocks this install. What changes for it:
 
 - **Database migrations 0007 to 0011 run on the first start.** They rebuild the `caddy_sites` table
-  (existing rows are kept) and add a `certificate_checks` table. A manual rollback must therefore
-  restore the pre-update database backup, not only the `current` link.
+  (existing rows are kept) and add a `certificate_checks` table. Release 1.0.x still starts on the
+  migrated file, but it does not know the new features' rows, so a manual rollback should restore the
+  pre-update database backup, not only the `current` link.
   `install-release.sh` does both by itself when the new release fails its health check.
 - **No new required settings.** The env file from 1.0.x works unchanged. Keep `AUTH_DISABLED`
   unset (see the note in the env example). `CERT_CHECK_PRIVATE_DOMAINS` is optional.

@@ -21,7 +21,8 @@ as on CT109) next to a real Caddy 2.11.4 whose admin socket has mode `0222`:
 - Certificate checks: with a wildcard-only Caddyfile nothing is probed; named sites that resolve to
   loopback or a private address are blocked without a connection.
 - Memory, with the unit's 192 MB heap cap and every page rendered three times in a row: peak 229 to
-  230 MB over two runs, about the same as the 1.0.2 build (219 to 239 MB), under `MemoryMax`.
+  251 MB over three runs, against 218 to 239 MB for the 1.0.2 build. The runs vary by about 20 MB, so no
+  clear difference, though a small increase is not ruled out. All far under `MemoryMax`.
 
 Not tested here: the systemd unit and `install-release.sh` (they need root on the target; both are
 unchanged since the 1.0.2 install that runs today), changing the Caddyfile or a form site through the UI

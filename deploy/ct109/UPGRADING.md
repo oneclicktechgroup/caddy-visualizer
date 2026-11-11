@@ -234,6 +234,11 @@ its `.sha256` in `dist/`.
   `git rev-parse origin/<branch>` showed it was already on the remote.
 - **`git describe` without `--tags` ignores lightweight tags**, so the first builds were named by bare hash
   (`bff30f9e`), which makes `cat VERSION` on CT109 unreadable at a glance. `build-bundle.sh` now passes `--tags`.
+- **The installed unit can drift from the repo's.** `install-release.sh` swaps releases but never touches
+  `/etc/systemd/system/caddy-visualizer.service`, so a unit fix committed after the first install does not
+  reach CT109 by itself. The v1.6.0 deploy showed this: a stop logged `Failed with result 'exit-code'` because
+  the installed unit lacked `SuccessExitStatus=143`. Before an upgrade, compare `systemctl cat caddy-visualizer`
+  with `deploy/ct109/caddy-visualizer.service` and list any difference under step 2 of the deploy.
 - **The fork is public.** Pushes and PR text are public; keep hostnames, addresses and secrets out.
 - **`gh` can resolve a fork's default repo to its parent.** Always `--repo oneclicktechgroup/caddy-visualizer`.
 - **A `cd` in one shell call leaks into the next.** Use absolute paths.
